@@ -1,0 +1,17 @@
+
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+ENV/
+.venv/
+env/
+.env/
+
+# IDE / Editor files (optional)
+.vscode/
+.idea/
+
+# Environment variables file (if you don't want it in repo)
+.env

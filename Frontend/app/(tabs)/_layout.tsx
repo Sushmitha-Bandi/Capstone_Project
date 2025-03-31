@@ -1,45 +1,45 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
+// app/_layout.tsx
+import React, { useEffect, useState } from 'react';
+import { Stack, useRouter } from 'expo-router';
+import { View, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+export default function Layout() {
+  const router = useRouter();
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem('jwt');
+        if (token) {
+          // If a token exists, go to your main/home screen.
+          // Example: router.replace('/explore') or '/home'
+          router.replace('/explore');
+        } else {
+          // If no token, go to the login screen
+          // (assuming you have a file named LoginScreen.tsx in app/)
+          router.replace('/LoginScreen');
+        }
+      } catch (error) {
+        // Fallback: if an error occurs, also go to login
+        router.replace('/LoginScreen');
+      }
+      setCheckingAuth(false);
+    };
 
-  return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
-  );
+    checkToken();
+  }, []);
+
+  // Show a loading indicator while checking token
+  if (checkingAuth) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  // Once the token check is done, render the stack normally
+  return <Stack />;
 }
