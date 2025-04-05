@@ -63,3 +63,26 @@ def delete_item(
     db.commit()
 
     return {"message": "Item deleted"}
+
+@router.put("/{item_id}", response_model=ShoppingItemOut)
+def update_item(
+    item_id: int,
+    updated_item: ShoppingItemCreate,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    user = db.query(User).filter(User.username == current_user).first()
+    item = db.query(ShoppingItem).filter(
+        ShoppingItem.id == item_id,
+        ShoppingItem.user_id == user.id
+    ).first()
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    item.item_name = updated_item.item_name
+    item.quantity = updated_item.quantity
+    db.commit()
+    db.refresh(item)
+
+    return item
