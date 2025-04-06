@@ -32,6 +32,14 @@ export default function HomeScreen() {
         <Text style={styles.sectionTitle}>🛍️ Shopping List</Text>
         <ShoppingListScreen />
       </View>
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>✍️ Manual Price Entry</Text>
+        <Button
+          title="Enter Price Manually"
+          onPress={() => router.push("/ManualEntryExpensesScreen")}
+          color="#007BFF"
+        />
+      </View>
 
       <View style={styles.footer}>
         <Button title="Logout" onPress={logout} color="#d9534f" />
