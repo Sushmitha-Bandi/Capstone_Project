@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
+from datetime import datetime
 
 Base = declarative_base()
 
@@ -34,3 +35,11 @@ class Budget(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"), unique=True)
     user = relationship("User", back_populates="budget")
+
+class ExpenseLog(Base):
+    __tablename__ = "expense_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    item_name = Column(String, nullable=False)
+    quantity = Column(String)
+    price = Column(Float)
+    timestamp = Column(DateTime, default=datetime.utcnow)
