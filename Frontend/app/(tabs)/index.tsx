@@ -10,6 +10,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import ShoppingListScreen from "../ShoppingListScreen";
 import BudgetScreen from "../BudgetScreen";
+import ExpenseHistoryScreen from "../ExpenseHistoryScreen";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -39,6 +40,10 @@ export default function HomeScreen() {
           onPress={() => router.push("/ManualEntryExpensesScreen")}
           color="#007BFF"
         />
+      </View>
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>📜 Expense History</Text>
+        <ExpenseHistoryScreen />
       </View>
 
       <View style={styles.footer}>
