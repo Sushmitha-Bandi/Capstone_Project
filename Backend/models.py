@@ -12,6 +12,8 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
 
     shopping_items = relationship("ShoppingItem", back_populates="user", cascade="all, delete")
+    budget = relationship("Budget", back_populates="user", uselist=False)
+
 
 
 class ShoppingItem(Base):
@@ -23,3 +25,12 @@ class ShoppingItem(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("User", back_populates="shopping_items")
+
+class Budget(Base):
+    __tablename__ = "budgets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    amount = Column(Float, nullable=False)
+
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    user = relationship("User", back_populates="budget")
