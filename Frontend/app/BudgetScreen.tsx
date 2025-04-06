@@ -12,9 +12,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function BudgetScreen() {
   const [budget, setBudget] = useState("");
+  const [savedBudget, setSavedBudget] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
+  // Fetch budget on mount
   const fetchBudget = async () => {
     try {
       const token = await AsyncStorage.getItem("jwt");
@@ -24,17 +28,17 @@ export default function BudgetScreen() {
 
       if (res.ok) {
         const data = await res.json();
-        setBudget(data.amount.toString());
+        setSavedBudget(data.amount.toString());
       } else {
-        setBudget("");
+        setSavedBudget(null);
       }
     } catch (err) {
-      console.error(err);
       Alert.alert("Error", "Could not fetch budget");
     }
     setFetching(false);
   };
 
+  // Save budget
   const saveBudget = async () => {
     if (!budget.trim() || isNaN(Number(budget))) {
       Alert.alert("Invalid Input", "Please enter a valid number.");
@@ -53,43 +57,101 @@ export default function BudgetScreen() {
         body: JSON.stringify({ amount: parseFloat(budget) }),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        Alert.alert("Success", "Budget updated successfully");
+        setSavedBudget(data.amount.toString());
+        setMessage("✅ Budget updated successfully!");
+        setEditMode(false);
+        setBudget("");
+        setTimeout(() => setMessage(null), 3000);
       } else {
-        Alert.alert("Error", "Failed to update budget");
+        Alert.alert("Error", data.detail || "Could not update budget");
       }
     } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Something went wrong");
+      Alert.alert("Error", "Something went wrong.");
     }
     setLoading(false);
   };
 
+  // Setup initial fetch
   useEffect(() => {
     fetchBudget();
   }, []);
 
+  // Handle edit click
+  const handleEdit = () => {
+    if (savedBudget) {
+      setBudget(savedBudget); // pre-fill current
+      setEditMode(true);
+    }
+  };
+
+  // Cancel editing
+  const cancelEdit = () => {
+    setBudget("");
+    setEditMode(false);
+    setMessage(null);
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>💰 Monthly Budget</Text>
-
       {fetching ? (
         <ActivityIndicator size="large" />
       ) : (
         <>
-          <Text style={styles.label}>Enter your budget:</Text>
-          <TextInput
-            style={styles.input}
-            value={budget}
-            onChangeText={setBudget}
-            placeholder="e.g. 2000"
-            keyboardType="numeric"
-          />
-          <Button
-            title={loading ? "Saving..." : "Save Budget"}
-            onPress={saveBudget}
-            disabled={loading}
-          />
+          {editMode ? (
+            <>
+              <Text style={styles.label}>Edit your budget:</Text>
+              <TextInput
+                style={styles.input}
+                value={budget}
+                onChangeText={setBudget}
+                placeholder="e.g. 2000"
+                keyboardType="numeric"
+              />
+              <View style={styles.buttonRow}>
+                <View style={styles.buttonWrapper}>
+                  <Button
+                    title={loading ? "Saving..." : "Save"}
+                    onPress={saveBudget}
+                    disabled={loading}
+                    color="#28a745"
+                  />
+                </View>
+                <View style={styles.buttonWrapper}>
+                  <Button title="Cancel" onPress={cancelEdit} color="#6c757d" />
+                </View>
+              </View>
+            </>
+          ) : savedBudget ? (
+            <>
+              <Text style={styles.savedText}>
+                🎯 Your current budget:{" "}
+                <Text style={styles.amount}>${savedBudget}</Text>
+              </Text>
+              {message && <Text style={styles.successText}>{message}</Text>}
+              <View style={{ marginTop: 10 }}>
+                <Button title="Edit Budget" onPress={handleEdit} />
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.label}>Set your budget:</Text>
+              <TextInput
+                style={styles.input}
+                value={budget}
+                onChangeText={setBudget}
+                placeholder="e.g. 2000"
+                keyboardType="numeric"
+              />
+              <Button
+                title={loading ? "Saving..." : "Save Budget"}
+                onPress={saveBudget}
+                disabled={loading}
+              />
+            </>
+          )}
         </>
       )}
     </View>
@@ -98,27 +160,44 @@ export default function BudgetScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    flex: 1,
-    backgroundColor: "#f8f9fa",
-    justifyContent: "center",
-  },
-  heading: {
-    fontSize: 24,
-    marginBottom: 20,
-    textAlign: "center",
-    fontWeight: "bold",
+    paddingTop: 10,
+    paddingBottom: 20,
   },
   label: {
     fontSize: 16,
     marginBottom: 6,
+    color: "#333",
   },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
     padding: 12,
     borderRadius: 6,
-    marginBottom: 15,
+    marginBottom: 12,
     backgroundColor: "#fff",
+  },
+  savedText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#333",
+    fontWeight: "500",
+  },
+  amount: {
+    color: "#007BFF",
+    fontWeight: "bold",
+  },
+  successText: {
+    color: "green",
+    fontSize: 14,
+    marginTop: 8,
+    fontStyle: "italic",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  buttonWrapper: {
+    flex: 1,
   },
 });
