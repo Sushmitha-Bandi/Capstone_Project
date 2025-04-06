@@ -21,6 +21,7 @@ Base.metadata.create_all(bind=engine)
 app.include_router(auth_router)
 app.include_router(shopping_router)
 
+
 @app.get("/")
 def read_root():
     return {"message": "Hello, world! This route does not need a token."}
