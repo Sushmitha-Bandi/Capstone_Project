@@ -29,7 +29,7 @@ const LoginScreen = () => {
       if (response.ok) {
         const data = await response.json();
         await AsyncStorage.setItem("jwt", data.access_token);
-        router.replace("/"); // go to tabbed home
+        router.replace("/(drawer)");
       } else {
         const errorData = await response.json();
         Alert.alert("Login Failed", errorData.detail || "Invalid credentials");
