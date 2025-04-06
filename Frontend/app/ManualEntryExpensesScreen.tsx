@@ -1,4 +1,3 @@
-// app/ManualEntryScreen.tsx
 import React, { useState } from "react";
 import {
   View,
@@ -10,10 +9,12 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 
 export default function ManualEntryScreen() {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
+  const router = useRouter();
 
   const handleSubmit = async () => {
     if (!description.trim() || !amount.trim() || isNaN(Number(amount))) {
@@ -31,8 +32,8 @@ export default function ManualEntryScreen() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          description,
-          amount: parseFloat(amount),
+          item_name: description,
+          price: parseFloat(amount),
         }),
       });
 
@@ -40,6 +41,8 @@ export default function ManualEntryScreen() {
         setDescription("");
         setAmount("");
         Alert.alert("✅ Saved", "Expense saved successfully!");
+
+        router.replace("/");
       } else {
         const err = await res.json();
         Alert.alert("Failed", err.detail || "Something went wrong");
@@ -71,7 +74,12 @@ export default function ManualEntryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: "center", backgroundColor: "#fff" },
+  container: {
+    flex: 1,
+    padding: 20,
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
   title: { fontSize: 24, marginBottom: 20, textAlign: "center" },
   input: {
     borderWidth: 1,

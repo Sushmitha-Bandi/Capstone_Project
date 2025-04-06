@@ -6,6 +6,7 @@ from database import engine
 from fastapi.middleware.cors import CORSMiddleware
 from shopping.shopping_routes import router as shopping_router
 from budget.budget_routes import router as budget_router
+from expenses.expense_routes import router as expense_router
 
 app = FastAPI()
 app.add_middleware(
@@ -21,6 +22,7 @@ Base.metadata.create_all(bind=engine)
 app.include_router(auth_router)
 app.include_router(shopping_router)
 app.include_router(budget_router)
+app.include_router(expense_router)
 
 
 @app.get("/")
