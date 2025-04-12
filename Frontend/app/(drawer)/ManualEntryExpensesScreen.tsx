@@ -14,11 +14,17 @@ import { useRouter } from "expo-router";
 export default function ManualEntryScreen() {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
+  const [quantity, setQuantity] = useState("");
   const router = useRouter();
 
   const handleSubmit = async () => {
-    if (!description.trim() || !amount.trim() || isNaN(Number(amount))) {
-      Alert.alert("Error", "Please enter valid item and amount");
+    if (
+      !description.trim() ||
+      !amount.trim() ||
+      isNaN(Number(amount)) ||
+      (quantity && isNaN(Number(quantity)))
+    ) {
+      Alert.alert("Error", "Please enter valid item, amount, and quantity");
       return;
     }
 
@@ -34,15 +40,16 @@ export default function ManualEntryScreen() {
         body: JSON.stringify({
           item_name: description,
           price: parseFloat(amount),
+          quantity: quantity || null,
         }),
       });
 
       if (res.ok) {
         setDescription("");
         setAmount("");
+        setQuantity("");
         Alert.alert("✅ Saved", "Expense saved successfully!");
-
-        router.replace("/");
+        router.push("/(drawer)/ExpenseHistoryScreen");
       } else {
         const err = await res.json();
         Alert.alert("Failed", err.detail || "Something went wrong");
@@ -60,6 +67,13 @@ export default function ManualEntryScreen() {
         placeholder="Item name (e.g. Milk)"
         value={description}
         onChangeText={setDescription}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Quantity (e.g. 2)"
+        value={quantity}
+        onChangeText={setQuantity}
+        keyboardType="numeric"
       />
       <TextInput
         style={styles.input}
