@@ -46,9 +46,7 @@ export default function DrawerLayout() {
     <Drawer
       screenOptions={{
         drawerType: "front",
-        drawerStyle: {
-          width: 250,
-        },
+        drawerStyle: { width: 250 },
         headerShown: true,
       }}
       drawerContent={(props) => <CustomDrawerContent {...props} />}
@@ -66,6 +64,10 @@ export default function DrawerLayout() {
       <Drawer.Screen
         name="ExpenseHistoryScreen"
         options={{ title: "📜 Expense History" }}
+      />
+      <Drawer.Screen
+        name="BarcodeScannerScreen"
+        options={{ title: "📷 Barcode Scanner" }}
       />
       <Drawer.Screen name="ProfileScreen" options={{ title: "👤 Profile" }} />
     </Drawer>
