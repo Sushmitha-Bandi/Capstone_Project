@@ -123,72 +123,50 @@ export default function BudgetScreen() {
     <View style={styles.container}>
       {fetching ? (
         <ActivityIndicator size="large" />
-      ) : (
+      ) : editMode ? (
         <>
-          {editMode ? (
-            <>
-              <Text style={styles.label}>Edit your budget:</Text>
-              <TextInput
-                style={styles.input}
-                value={budget}
-                onChangeText={setBudget}
-                placeholder="e.g. 2000"
-                keyboardType="numeric"
-              />
-              <View style={styles.buttonRow}>
-                <View style={styles.buttonWrapper}>
-                  <Button
-                    title={loading ? "Saving..." : "Save"}
-                    onPress={saveBudget}
-                    disabled={loading}
-                    color="#28a745"
-                  />
-                </View>
-                <View style={styles.buttonWrapper}>
-                  <Button title="Cancel" onPress={cancelEdit} color="#6c757d" />
-                </View>
-              </View>
-            </>
-          ) : savedBudget ? (
-            <>
-              <Text style={styles.savedText}>
-                🎯 Your current budget:{" "}
-                <Text style={styles.amount}>${savedBudget}</Text>
-              </Text>
-              <Text style={styles.savedText}>
-                💰 Total Spent:{" "}
-                <Text style={styles.amount}>
-                  ${totalSpent?.toFixed(2) ?? "0.00"}
-                </Text>
-              </Text>
-              {message && <Text style={styles.successText}>{message}</Text>}
-              {getComparisonMessage() && (
-                <Text style={styles.statusMessage}>
-                  {getComparisonMessage()}
-                </Text>
-              )}
-              <View style={{ marginTop: 10 }}>
-                <Button title="Edit Budget" onPress={handleEdit} />
-              </View>
-            </>
-          ) : (
-            <>
-              <Text style={styles.label}>Set your budget:</Text>
-              <TextInput
-                style={styles.input}
-                value={budget}
-                onChangeText={setBudget}
-                placeholder="e.g. 2000"
-                keyboardType="numeric"
-              />
+          <Text style={styles.label}>Edit your budget:</Text>
+          <TextInput
+            style={styles.input}
+            value={budget}
+            onChangeText={setBudget}
+            placeholder="e.g. 2000"
+            keyboardType="numeric"
+          />
+          <View style={styles.buttonRow}>
+            <View style={styles.buttonWrapper}>
               <Button
-                title={loading ? "Saving..." : "Save Budget"}
+                title={loading ? "Saving..." : "Save"}
                 onPress={saveBudget}
                 disabled={loading}
+                color="#28a745"
               />
-            </>
-          )}
+            </View>
+            <View style={styles.buttonWrapper}>
+              <Button title="Cancel" onPress={cancelEdit} color="#6c757d" />
+            </View>
+          </View>
         </>
+      ) : (
+        <View style={styles.centeredContent}>
+          <Text style={styles.savedText}>
+            🎯 Your current budget:{" "}
+            <Text style={styles.amount}>${savedBudget}</Text>
+          </Text>
+          <Text style={styles.savedText}>
+            💰 Total Spent:{" "}
+            <Text style={styles.amount}>
+              ${totalSpent?.toFixed(2) ?? "0.00"}
+            </Text>
+          </Text>
+          {message && <Text style={styles.successText}>{message}</Text>}
+          {getComparisonMessage() && (
+            <Text style={styles.statusMessage}>{getComparisonMessage()}</Text>
+          )}
+          <View style={{ marginTop: 20 }}>
+            <Button title="Edit Budget" onPress={handleEdit} />
+          </View>
+        </View>
       )}
     </View>
   );
@@ -199,6 +177,11 @@ const styles = StyleSheet.create({
     padding: 16,
     flex: 1,
     backgroundColor: "#fff",
+  },
+  centeredContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   label: {
     fontSize: 16,
@@ -229,10 +212,11 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   statusMessage: {
-    marginTop: 10,
+    marginTop: 12,
     fontSize: 16,
     color: "#dc3545",
     fontWeight: "bold",
+    textAlign: "center",
   },
   buttonRow: {
     flexDirection: "row",
