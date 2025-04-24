@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Animated,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -16,7 +17,7 @@ export default function BudgetScreen() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [editMode, setEditMode] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message] = useState(new Animated.Value(0));
   const [totalSpent, setTotalSpent] = useState<number | null>(null);
 
   const fetchBudget = async () => {
@@ -75,10 +76,22 @@ export default function BudgetScreen() {
 
       if (res.ok) {
         setSavedBudget(data.amount.toString());
-        setMessage("✅ Budget updated successfully!");
         setEditMode(false);
         setBudget("");
-        setTimeout(() => setMessage(null), 3000);
+        fetchTotalExpenses();
+        Animated.timing(message, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }).start(() =>
+          setTimeout(() => {
+            Animated.timing(message, {
+              toValue: 0,
+              duration: 800,
+              useNativeDriver: true,
+            }).start();
+          }, 2000)
+        );
       } else {
         Alert.alert("Error", data.detail || "Could not update budget");
       }
@@ -86,14 +99,6 @@ export default function BudgetScreen() {
       Alert.alert("Error", "Something went wrong.");
     }
     setLoading(false);
-  };
-
-  const getComparisonMessage = () => {
-    if (!savedBudget || totalSpent === null) return null;
-    const budgetNum = parseFloat(savedBudget);
-    if (totalSpent > budgetNum) return "🚨 You have exceeded your budget!";
-    if (totalSpent === budgetNum) return "⚖️ You are exactly on your budget.";
-    return `🟢 You are under budget by $${(budgetNum - totalSpent).toFixed(2)}`;
   };
 
   useEffect(() => {
@@ -106,67 +111,88 @@ export default function BudgetScreen() {
     fetchData();
   }, []);
 
-  const handleEdit = () => {
-    if (savedBudget) {
-      setBudget(savedBudget);
-      setEditMode(true);
-    }
-  };
-
-  const cancelEdit = () => {
-    setBudget("");
-    setEditMode(false);
-    setMessage(null);
+  const getComparisonStatus = () => {
+    if (!savedBudget || totalSpent === null) return null;
+    const budgetNum = parseFloat(savedBudget);
+    if (totalSpent > budgetNum)
+      return <Text style={[styles.badge, styles.over]}>Over Budget 🚨</Text>;
+    if (totalSpent === budgetNum)
+      return <Text style={[styles.badge, styles.equal]}>On Budget ⚖️</Text>;
+    return <Text style={[styles.badge, styles.under]}>Under Budget ✅</Text>;
   };
 
   return (
     <View style={styles.container}>
       {fetching ? (
         <ActivityIndicator size="large" />
-      ) : editMode ? (
+      ) : (
         <>
-          <Text style={styles.label}>Edit your budget:</Text>
-          <TextInput
-            style={styles.input}
-            value={budget}
-            onChangeText={setBudget}
-            placeholder="e.g. 2000"
-            keyboardType="numeric"
-          />
-          <View style={styles.buttonRow}>
-            <View style={styles.buttonWrapper}>
-              <Button
-                title={loading ? "Saving..." : "Save"}
-                onPress={saveBudget}
-                disabled={loading}
-                color="#28a745"
+          <View style={styles.card}>
+            <Text style={styles.title}>💰 Budget Summary</Text>
+            <Text style={styles.budgetLine}>
+              Budget:{" "}
+              <Text style={styles.amount}>
+                ${savedBudget ? savedBudget : "Not Set"}
+              </Text>
+            </Text>
+            <Text style={styles.budgetLine}>
+              Spent:{" "}
+              <Text style={styles.spent}>
+                ${totalSpent?.toFixed(2) ?? "0.00"}
+              </Text>
+            </Text>
+            {getComparisonStatus()}
+          </View>
+
+          {editMode ? (
+            <>
+              <Text style={styles.label}>Edit Budget:</Text>
+              <TextInput
+                style={styles.input}
+                value={budget}
+                onChangeText={setBudget}
+                placeholder="e.g. 2000"
+                keyboardType="numeric"
               />
+              <View style={styles.buttonRow}>
+                <View style={styles.buttonWrapper}>
+                  <Button
+                    title={loading ? "Saving..." : "Save"}
+                    onPress={saveBudget}
+                    disabled={loading}
+                    color="#28a745"
+                  />
+                </View>
+                <View style={styles.buttonWrapper}>
+                  <Button title="Cancel" onPress={() => setEditMode(false)} />
+                </View>
+              </View>
+            </>
+          ) : (
+            <View style={styles.editButtonContainer}>
+              <Button title="Edit Budget" onPress={() => setEditMode(true)} />
             </View>
-            <View style={styles.buttonWrapper}>
-              <Button title="Cancel" onPress={cancelEdit} color="#6c757d" />
-            </View>
+          )}
+
+          {/* Animated success text */}
+          <Animated.Text
+            style={[
+              styles.successText,
+              { opacity: message, transform: [{ scale: message }] },
+            ]}
+          >
+            ✅ Budget updated!
+          </Animated.Text>
+
+          {/* Motivational Tip */}
+          <View style={styles.tipBox}>
+            <Text style={styles.tipText}>
+              💡 Tip: Keep your spending{" "}
+              <Text style={{ fontWeight: "bold" }}>20%</Text> below your budget
+              to save more!
+            </Text>
           </View>
         </>
-      ) : (
-        <View style={styles.centeredContent}>
-          <Text style={styles.savedText}>
-            🎯 Your current budget:{" "}
-            <Text style={styles.amount}>${savedBudget}</Text>
-          </Text>
-          <Text style={styles.savedText}>
-            💰 Total Spent:{" "}
-            <Text style={styles.amount}>
-              ${totalSpent?.toFixed(2) ?? "0.00"}
-            </Text>
-          </Text>
-          {message && <Text style={styles.successText}>{message}</Text>}
-          {getComparisonMessage() && (
-            <Text style={styles.statusMessage}>{getComparisonMessage()}</Text>
-          )}
-          <View style={{ marginTop: 20 }}>
-            <Button title="Edit Budget" onPress={handleEdit} />
-          </View>
-        </View>
       )}
     </View>
   );
@@ -174,19 +200,56 @@ export default function BudgetScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    padding: 20,
     flex: 1,
     backgroundColor: "#fff",
   },
-  centeredContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+  card: {
+    backgroundColor: "#f0f4f8",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    elevation: 3,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  budgetLine: {
+    fontSize: 16,
+    marginVertical: 4,
+  },
+  amount: {
+    color: "#007bff",
+    fontWeight: "bold",
+  },
+  spent: {
+    color: "#dc3545",
+    fontWeight: "bold",
+  },
+  badge: {
+    marginTop: 10,
+    padding: 6,
+    borderRadius: 6,
+    textAlign: "center",
+    fontWeight: "bold",
+  },
+  over: {
+    backgroundColor: "#f8d7da",
+    color: "#721c24",
+  },
+  equal: {
+    backgroundColor: "#fff3cd",
+    color: "#856404",
+  },
+  under: {
+    backgroundColor: "#d4edda",
+    color: "#155724",
   },
   label: {
     fontSize: 16,
     marginBottom: 6,
-    color: "#333",
   },
   input: {
     borderWidth: 1,
@@ -194,36 +257,34 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 6,
     marginBottom: 12,
-    backgroundColor: "#f9f9f9",
-  },
-  savedText: {
-    fontSize: 16,
-    color: "#333",
-    marginBottom: 6,
-  },
-  amount: {
-    color: "#007BFF",
-    fontWeight: "bold",
-  },
-  successText: {
-    color: "green",
-    fontSize: 14,
-    marginTop: 8,
-    fontStyle: "italic",
-  },
-  statusMessage: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#dc3545",
-    fontWeight: "bold",
-    textAlign: "center",
+    backgroundColor: "#fff",
   },
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 10,
   },
   buttonWrapper: {
     flex: 1,
+  },
+  editButtonContainer: {
+    marginTop: 10,
+  },
+  successText: {
+    color: "green",
+    fontSize: 14,
+    marginTop: 16,
+    textAlign: "center",
+  },
+  tipBox: {
+    marginTop: 30,
+    backgroundColor: "#e3f2fd",
+    padding: 14,
+    borderRadius: 10,
+  },
+  tipText: {
+    color: "#0d47a1",
+    fontSize: 14,
+    textAlign: "center",
   },
 });
