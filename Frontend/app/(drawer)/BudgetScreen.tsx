@@ -17,8 +17,8 @@ export default function BudgetScreen() {
   const [fetching, setFetching] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [totalSpent, setTotalSpent] = useState<number | null>(null);
 
-  // Fetch budget on mount
   const fetchBudget = async () => {
     try {
       const token = await AsyncStorage.getItem("jwt");
@@ -32,13 +32,27 @@ export default function BudgetScreen() {
       } else {
         setSavedBudget(null);
       }
-    } catch (err) {
+    } catch {
       Alert.alert("Error", "Could not fetch budget");
     }
-    setFetching(false);
   };
 
-  // Save budget
+  const fetchTotalExpenses = async () => {
+    try {
+      const token = await AsyncStorage.getItem("jwt");
+      const res = await fetch("http://192.168.1.84:8000/expenses/total", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const total = await res.json();
+        setTotalSpent(Number(total));
+      }
+    } catch {
+      console.error("Error fetching expenses");
+    }
+  };
+
   const saveBudget = async () => {
     if (!budget.trim() || isNaN(Number(budget))) {
       Alert.alert("Invalid Input", "Please enter a valid number.");
@@ -68,26 +82,37 @@ export default function BudgetScreen() {
       } else {
         Alert.alert("Error", data.detail || "Could not update budget");
       }
-    } catch (err) {
+    } catch {
       Alert.alert("Error", "Something went wrong.");
     }
     setLoading(false);
   };
 
-  // Setup initial fetch
+  const getComparisonMessage = () => {
+    if (!savedBudget || totalSpent === null) return null;
+    const budgetNum = parseFloat(savedBudget);
+    if (totalSpent > budgetNum) return "🚨 You have exceeded your budget!";
+    if (totalSpent === budgetNum) return "⚖️ You are exactly on your budget.";
+    return `🟢 You are under budget by $${(budgetNum - totalSpent).toFixed(2)}`;
+  };
+
   useEffect(() => {
-    fetchBudget();
+    const fetchData = async () => {
+      setFetching(true);
+      await fetchBudget();
+      await fetchTotalExpenses();
+      setFetching(false);
+    };
+    fetchData();
   }, []);
 
-  // Handle edit click
   const handleEdit = () => {
     if (savedBudget) {
-      setBudget(savedBudget); // pre-fill current
+      setBudget(savedBudget);
       setEditMode(true);
     }
   };
 
-  // Cancel editing
   const cancelEdit = () => {
     setBudget("");
     setEditMode(false);
@@ -130,7 +155,18 @@ export default function BudgetScreen() {
                 🎯 Your current budget:{" "}
                 <Text style={styles.amount}>${savedBudget}</Text>
               </Text>
+              <Text style={styles.savedText}>
+                💰 Total Spent:{" "}
+                <Text style={styles.amount}>
+                  ${totalSpent?.toFixed(2) ?? "0.00"}
+                </Text>
+              </Text>
               {message && <Text style={styles.successText}>{message}</Text>}
+              {getComparisonMessage() && (
+                <Text style={styles.statusMessage}>
+                  {getComparisonMessage()}
+                </Text>
+              )}
               <View style={{ marginTop: 10 }}>
                 <Button title="Edit Budget" onPress={handleEdit} />
               </View>
@@ -160,8 +196,9 @@ export default function BudgetScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 10,
-    paddingBottom: 20,
+    padding: 16,
+    flex: 1,
+    backgroundColor: "#fff",
   },
   label: {
     fontSize: 16,
@@ -174,13 +211,12 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 6,
     marginBottom: 12,
-    backgroundColor: "#fff",
+    backgroundColor: "#f9f9f9",
   },
   savedText: {
-    marginTop: 10,
     fontSize: 16,
     color: "#333",
-    fontWeight: "500",
+    marginBottom: 6,
   },
   amount: {
     color: "#007BFF",
@@ -191,6 +227,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     fontStyle: "italic",
+  },
+  statusMessage: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#dc3545",
+    fontWeight: "bold",
   },
   buttonRow: {
     flexDirection: "row",
