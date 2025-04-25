@@ -4,6 +4,9 @@ from pydantic import BaseModel
 class UserCreate(BaseModel):
     username: str
     password: str
+    full_name: str
+    email: str
+    phone: str
 
 class UserOut(BaseModel):
     id: int

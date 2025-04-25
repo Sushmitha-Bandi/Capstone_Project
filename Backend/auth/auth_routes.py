@@ -8,7 +8,7 @@ from .auth_schemas import (
     UserLogin, 
     Token
 )
-from .auth_service import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from .auth_service import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user
 from database import get_db 
 from models import User
 from security import hash_password, verify_password
@@ -28,7 +28,10 @@ def signup(user_data: UserCreate, db: Session = Depends(get_db)):
 
     new_user = User(
         username=user_data.username,
-        hashed_password=hashed_pw
+        hashed_password=hashed_pw,
+        full_name=user_data.full_name,
+        email=user_data.email,
+        phone=user_data.phone
     )
     db.add(new_user)
     db.commit()
@@ -61,4 +64,22 @@ def login_for_access_token(data: UserLogin, db: Session = Depends(get_db)):
     return {
         "access_token": access_token,
         "token_type": "bearer"
+    }
+
+@router.get("/me")
+def get_user_profile(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    user = db.query(User).filter(User.username == current_user).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "id": user.id,
+        "username": user.username,
+        "full_name": user.full_name,
+        "email": user.email,
+        "phone": user.phone,
+        "created_at": user.created_at
     }

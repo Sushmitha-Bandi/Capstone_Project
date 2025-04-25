@@ -39,7 +39,13 @@ const SignupScreen = () => {
       const response = await fetch("http://192.168.1.84:8000/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({
+          username,
+          password,
+          full_name: fullName,
+          email,
+          phone,
+        }),
       });
 
       if (response.ok) {
