@@ -11,10 +11,14 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    
+    full_name = Column(String(100), nullable=True)
+    email = Column(String(100), nullable=True)
+    phone = Column(String(20), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)  # ✅ ADD THIS
 
     shopping_items = relationship("ShoppingItem", back_populates="user", cascade="all, delete")
     budget = relationship("Budget", back_populates="user", uselist=False)
-
 
 
 class ShoppingItem(Base):
