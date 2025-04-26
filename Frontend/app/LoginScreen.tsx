@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  TouchableOpacity,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -43,6 +44,7 @@ const LoginScreen = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
+
       <TextInput
         style={styles.input}
         placeholder="Username"
@@ -56,14 +58,26 @@ const LoginScreen = () => {
         onChangeText={setPassword}
         secureTextEntry
       />
+
       {loading ? (
         <ActivityIndicator size="large" color="#0000ff" />
       ) : (
         <Button title="Login" onPress={handleLogin} />
       )}
+
+      {/* Forgot Password link */}
+      <TouchableOpacity
+        style={styles.forgotContainer}
+        onPress={() => router.push("/ForgotPasswordScreen")}
+      >
+        <Text style={styles.forgotText}>Forgot Password?</Text>
+      </TouchableOpacity>
+
       <View style={styles.switchContainer}>
-        <Text>Don't have an account?</Text>
-        <Button title="Sign Up" onPress={() => router.push("/SignupScreen")} />
+        <Text style={styles.switchText}>Don't have an account?</Text>
+        <TouchableOpacity onPress={() => router.push("/SignupScreen")}>
+          <Text style={styles.signupText}>Sign Up</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -71,26 +85,50 @@ const LoginScreen = () => {
 
 export default LoginScreen;
 
+// ✨ Updated Styles for professional look
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: 24,
     justifyContent: "center",
     backgroundColor: "#fff",
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     textAlign: "center",
-    marginBottom: 20,
-    fontWeight: "600",
+    marginBottom: 30,
+    fontWeight: "bold",
+    color: "#333",
   },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
-    padding: 12,
-    marginBottom: 15,
-    borderRadius: 5,
+    padding: 14,
+    marginBottom: 20,
+    borderRadius: 8,
     fontSize: 16,
   },
-  switchContainer: { marginTop: 20, alignItems: "center" },
+  forgotContainer: {
+    marginTop: 15,
+    alignItems: "center",
+  },
+  forgotText: {
+    color: "#007BFF",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  switchContainer: {
+    marginTop: 30,
+    alignItems: "center",
+  },
+  switchText: {
+    fontSize: 16,
+    color: "#555",
+  },
+  signupText: {
+    marginTop: 6,
+    fontSize: 16,
+    color: "#007BFF",
+    fontWeight: "600",
+  },
 });

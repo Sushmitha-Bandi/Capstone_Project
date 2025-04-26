@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -26,37 +26,46 @@ export default function ExpenseHistoryScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  const fetchExpenses = async () => {
+  const fetchExpensesAndTotal = async () => {
+    setLoading(true);
     const token = await AsyncStorage.getItem("jwt");
-    if (!token) return;
+
+    if (!token) {
+      setExpenses([]);
+      setTotalSpent(0);
+      setLoading(false);
+      return;
+    }
 
     try {
-      const res = await fetch("http://192.168.1.84:8000/expenses/", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setExpenses(data);
+      const [expensesRes, totalRes] = await Promise.all([
+        fetch("http://192.168.1.84:8000/expenses/", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("http://192.168.1.84:8000/expenses/total", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if (expensesRes.ok) {
+        const expensesData = await expensesRes.json();
+        setExpenses(expensesData);
+      } else {
+        setExpenses([]);
+      }
+
+      if (totalRes.ok) {
+        const totalData = await totalRes.json();
+        setTotalSpent(Number(totalData));
+      } else {
+        setTotalSpent(0);
       }
     } catch (err) {
-      console.error("Error fetching expenses", err);
+      console.error("Error fetching data", err);
+      setExpenses([]);
+      setTotalSpent(0);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchTotalSpent = async () => {
-    const token = await AsyncStorage.getItem("jwt");
-    if (!token) return;
-
-    try {
-      const res = await fetch("http://192.168.1.84:8000/expenses/total", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const total = await res.json();
-      setTotalSpent(Number(total));
-    } catch (err) {
-      console.error("Error fetching total spent", err);
     }
   };
 
@@ -79,23 +88,34 @@ export default function ExpenseHistoryScreen() {
 
       if (res.status === 204) {
         setModalVisible(false);
-        await fetchExpenses();
-        await fetchTotalSpent();
+        await fetchExpensesAndTotal();
       } else {
-        const errorText = await res.text();
-        console.error(`Failed to delete: ${res.status} - ${errorText}`);
+        console.error("Failed to delete:", await res.text());
       }
     } catch (err) {
-      console.error("DELETE failed:", err);
+      console.error("DELETE error", err);
     }
   };
 
   useFocusEffect(
-    React.useCallback(() => {
-      fetchExpenses();
-      fetchTotalSpent();
+    useCallback(() => {
+      fetchExpensesAndTotal();
     }, [])
   );
+
+  useEffect(() => {
+    const unsubscribe = AsyncStorage.addListener?.("change", async () => {
+      const token = await AsyncStorage.getItem("jwt");
+      if (!token) {
+        setExpenses([]);
+        setTotalSpent(0);
+      }
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, []);
 
   const renderItem = ({ item }: { item: Expense }) => (
     <View style={styles.card}>
@@ -139,7 +159,7 @@ export default function ExpenseHistoryScreen() {
         />
       )}
 
-      {/* Custom Modal */}
+      {/* Delete Confirmation Modal */}
       <Modal
         visible={modalVisible}
         transparent
@@ -205,11 +225,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 6,
   },
-  deleteText: {
-    color: "#dc3545",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+  deleteText: { color: "#dc3545", fontWeight: "bold", fontSize: 16 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -224,11 +240,7 @@ const styles = StyleSheet.create({
     elevation: 5,
     alignItems: "center",
   },
-  modalText: {
-    fontSize: 18,
-    marginBottom: 20,
-    fontWeight: "500",
-  },
+  modalText: { fontSize: 18, marginBottom: 20, fontWeight: "500" },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -241,8 +253,5 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: "center",
   },
-  modalBtnText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
+  modalBtnText: { color: "#fff", fontWeight: "bold" },
 });

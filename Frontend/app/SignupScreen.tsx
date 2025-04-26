@@ -8,11 +8,11 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  TouchableOpacity,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 
-const SignupScreen = () => {
+export default function SignupScreen() {
   const router = useRouter();
 
   const [fullName, setFullName] = useState("");
@@ -23,14 +23,42 @@ const SignupScreen = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSignup = async () => {
-    if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
-      return;
+  const [errors, setErrors] = useState<any>({});
+
+  const validateFields = () => {
+    const newErrors: any = {};
+
+    if (!fullName.trim()) {
+      newErrors.fullName = "Full Name is required";
+    }
+    if (!email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^\S+@\S+\.\S+$/.test(email)) {
+      newErrors.email = "Invalid email format";
+    }
+    if (!phone.trim()) {
+      newErrors.phone = "Phone number is required";
+    } else if (!/^[0-9]{10}$/.test(phone)) {
+      newErrors.phone = "Phone number must be 10 digits";
+    }
+    if (!username.trim()) {
+      newErrors.username = "Username is required";
+    }
+    if (!password) {
+      newErrors.password = "Password is required";
+    } else if (password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
+    }
+    if (confirmPassword !== password) {
+      newErrors.confirmPassword = "Passwords do not match";
     }
 
-    if (!fullName || !email || !phone || !username || !password) {
-      Alert.alert("Error", "Please fill in all fields");
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSignup = async () => {
+    if (!validateFields()) {
       return;
     }
 
@@ -49,15 +77,14 @@ const SignupScreen = () => {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        await AsyncStorage.setItem("jwt", data.token);
-        router.replace("/");
+        Alert.alert("Success", "Account created! Please login.");
+        router.replace("/LoginScreen");
       } else {
         const errorData = await response.json();
         Alert.alert("Signup Failed", errorData.detail || "Unable to sign up");
       }
     } catch (error) {
-      Alert.alert("Error", "Unable to connect to the server");
+      Alert.alert("Error", "Unable to connect to server");
     }
     setLoading(false);
   };
@@ -70,94 +97,137 @@ const SignupScreen = () => {
         style={styles.input}
         placeholder="Full Name"
         value={fullName}
-        onChangeText={setFullName}
+        onChangeText={(text) => {
+          setFullName(text);
+          if (errors.fullName) setErrors({ ...errors, fullName: "" });
+        }}
       />
+      {errors.fullName && (
+        <Text style={styles.errorText}>{errors.fullName}</Text>
+      )}
 
       <TextInput
         style={styles.input}
         placeholder="Email"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(text) => {
+          setEmail(text);
+          if (errors.email) setErrors({ ...errors, email: "" });
+        }}
         keyboardType="email-address"
       />
+      {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
       <TextInput
         style={styles.input}
         placeholder="Phone Number"
         value={phone}
-        onChangeText={setPhone}
+        onChangeText={(text) => {
+          setPhone(text);
+          if (errors.phone) setErrors({ ...errors, phone: "" });
+        }}
         keyboardType="phone-pad"
       />
+      {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
 
       <TextInput
         style={styles.input}
         placeholder="Username"
         value={username}
-        onChangeText={setUsername}
+        onChangeText={(text) => {
+          setUsername(text);
+          if (errors.username) setErrors({ ...errors, username: "" });
+        }}
       />
+      {errors.username && (
+        <Text style={styles.errorText}>{errors.username}</Text>
+      )}
 
       <TextInput
         style={styles.input}
         placeholder="Password"
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(text) => {
+          setPassword(text);
+          if (errors.password) setErrors({ ...errors, password: "" });
+        }}
         secureTextEntry
       />
+      {errors.password && (
+        <Text style={styles.errorText}>{errors.password}</Text>
+      )}
 
       <TextInput
         style={styles.input}
         placeholder="Confirm Password"
         value={confirmPassword}
-        onChangeText={setConfirmPassword}
+        onChangeText={(text) => {
+          setConfirmPassword(text);
+          if (errors.confirmPassword)
+            setErrors({ ...errors, confirmPassword: "" });
+        }}
         secureTextEntry
       />
+      {errors.confirmPassword && (
+        <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+      )}
 
       {loading ? (
-        <ActivityIndicator size="large" color="#0000ff" style={styles.loader} />
+        <ActivityIndicator size="large" color="#0000ff" />
       ) : (
         <Button title="Sign Up" onPress={handleSignup} />
       )}
 
       <View style={styles.switchContainer}>
         <Text style={styles.switchText}>Already have an account?</Text>
-        <Button title="Login" onPress={() => router.push("/LoginScreen")} />
+        <TouchableOpacity onPress={() => router.push("/LoginScreen")}>
+          <Text style={styles.loginText}>Login</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
-};
-
-export default SignupScreen;
+}
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    padding: 24,
     justifyContent: "center",
     backgroundColor: "#fff",
     flexGrow: 1,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     textAlign: "center",
-    marginBottom: 20,
-    fontWeight: "600",
+    marginBottom: 30,
+    fontWeight: "bold",
+    color: "#333",
   },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
-    padding: 12,
-    marginBottom: 15,
-    borderRadius: 5,
+    padding: 14,
+    marginBottom: 10,
+    borderRadius: 8,
     fontSize: 16,
   },
-  loader: {
-    marginVertical: 10,
+  errorText: {
+    color: "#dc3545",
+    fontSize: 14,
+    marginBottom: 10,
+    marginLeft: 5,
   },
   switchContainer: {
-    marginTop: 20,
+    marginTop: 30,
     alignItems: "center",
   },
   switchText: {
-    marginBottom: 5,
     fontSize: 16,
+    color: "#555",
+  },
+  loginText: {
+    marginTop: 6,
+    fontSize: 16,
+    color: "#007BFF",
+    fontWeight: "600",
   },
 });

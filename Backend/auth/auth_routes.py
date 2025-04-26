@@ -6,7 +6,8 @@ from .auth_schemas import (
     UserCreate, 
     UserOut, 
     UserLogin, 
-    Token
+    Token,
+    PasswordResetRequest
 )
 from .auth_service import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user
 from database import get_db 
@@ -83,3 +84,18 @@ def get_user_profile(
         "phone": user.phone,
         "created_at": user.created_at
     }
+
+@router.post("/reset-password")
+def reset_password(
+    request: PasswordResetRequest,
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.username == request.username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    hashed_pw = hash_password(request.new_password)
+    user.hashed_password = hashed_pw
+
+    db.commit()
+    return {"message": "Password reset successfully."}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,47 +10,55 @@ import {
   Animated,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuth } from "./AuthContext";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function BudgetScreen() {
-  const [budget, setBudget] = useState("");
-  const [savedBudget, setSavedBudget] = useState<string | null>(null);
+  const [budget, setBudget] = useState<string>("");
+  const [savedBudget, setSavedBudget] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [message] = useState(new Animated.Value(0));
   const [totalSpent, setTotalSpent] = useState<number | null>(null);
 
-  const fetchBudget = async () => {
+  const { resetKey } = useAuth();
+
+  const fetchBudgetAndExpenses = async () => {
     try {
       const token = await AsyncStorage.getItem("jwt");
-      const res = await fetch("http://192.168.1.84:8000/budget/", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      if (!token) {
+        setSavedBudget(null);
+        setTotalSpent(0);
+        return;
+      }
 
-      if (res.ok) {
-        const data = await res.json();
-        setSavedBudget(data.amount.toString());
+      const [budgetRes, totalRes] = await Promise.all([
+        fetch("http://192.168.1.84:8000/budget/", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("http://192.168.1.84:8000/expenses/total", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if (budgetRes.ok) {
+        const data = await budgetRes.json();
+        setSavedBudget(data.amount);
       } else {
         setSavedBudget(null);
       }
-    } catch {
-      Alert.alert("Error", "Could not fetch budget");
-    }
-  };
 
-  const fetchTotalExpenses = async () => {
-    try {
-      const token = await AsyncStorage.getItem("jwt");
-      const res = await fetch("http://192.168.1.84:8000/expenses/total", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.ok) {
-        const total = await res.json();
+      if (totalRes.ok) {
+        const total = await totalRes.json();
         setTotalSpent(Number(total));
+      } else {
+        setTotalSpent(0);
       }
-    } catch {
-      console.error("Error fetching expenses");
+    } catch (err) {
+      console.error("Error fetching budget or expenses", err);
+      setSavedBudget(null);
+      setTotalSpent(0);
     }
   };
 
@@ -59,7 +67,6 @@ export default function BudgetScreen() {
       Alert.alert("Invalid Input", "Please enter a valid number.");
       return;
     }
-
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem("jwt");
@@ -72,51 +79,45 @@ export default function BudgetScreen() {
         body: JSON.stringify({ amount: parseFloat(budget) }),
       });
 
-      const data = await res.json();
-
       if (res.ok) {
-        setSavedBudget(data.amount.toString());
-        setEditMode(false);
+        Animated.sequence([
+          Animated.timing(message, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(message, {
+            toValue: 0,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ]).start();
         setBudget("");
-        fetchTotalExpenses();
-        Animated.timing(message, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }).start(() =>
-          setTimeout(() => {
-            Animated.timing(message, {
-              toValue: 0,
-              duration: 800,
-              useNativeDriver: true,
-            }).start();
-          }, 2000)
-        );
+        setEditMode(false);
+        await fetchBudgetAndExpenses();
       } else {
-        Alert.alert("Error", data.detail || "Could not update budget");
+        Alert.alert("Error", "Failed to update budget");
       }
     } catch {
-      Alert.alert("Error", "Something went wrong.");
+      Alert.alert("Error", "Something went wrong");
     }
     setLoading(false);
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
+  useFocusEffect(
+    useCallback(() => {
       setFetching(true);
-      await fetchBudget();
-      await fetchTotalExpenses();
-      setFetching(false);
-    };
-    fetchData();
-  }, []);
+      setSavedBudget(null);
+      setTotalSpent(0);
+      fetchBudgetAndExpenses().finally(() => setFetching(false));
+    }, [resetKey])
+  );
 
   const getComparisonStatus = () => {
-    if (!savedBudget || totalSpent === null) return null;
-    const budgetNum = parseFloat(savedBudget);
-    if (totalSpent > budgetNum)
+    if (savedBudget === null || totalSpent === null) return null;
+    if (totalSpent > savedBudget)
       return <Text style={[styles.badge, styles.over]}>Over Budget 🚨</Text>;
-    if (totalSpent === budgetNum)
+    if (totalSpent === savedBudget)
       return <Text style={[styles.badge, styles.equal]}>On Budget ⚖️</Text>;
     return <Text style={[styles.badge, styles.under]}>Under Budget ✅</Text>;
   };
@@ -132,13 +133,22 @@ export default function BudgetScreen() {
             <Text style={styles.budgetLine}>
               Budget:{" "}
               <Text style={styles.amount}>
-                ${savedBudget ? savedBudget : "Not Set"}
+                ${savedBudget?.toFixed(2) ?? "Not Set"}
               </Text>
             </Text>
             <Text style={styles.budgetLine}>
               Spent:{" "}
               <Text style={styles.spent}>
                 ${totalSpent?.toFixed(2) ?? "0.00"}
+              </Text>
+            </Text>
+            <Text style={styles.budgetLine}>
+              Remaining:{" "}
+              <Text style={styles.remaining}>
+                $
+                {savedBudget && totalSpent !== null
+                  ? (savedBudget - totalSpent).toFixed(2)
+                  : "0.00"}
               </Text>
             </Text>
             {getComparisonStatus()}
@@ -174,7 +184,6 @@ export default function BudgetScreen() {
             </View>
           )}
 
-          {/* Animated success text */}
           <Animated.Text
             style={[
               styles.successText,
@@ -184,12 +193,9 @@ export default function BudgetScreen() {
             ✅ Budget updated!
           </Animated.Text>
 
-          {/* Motivational Tip */}
           <View style={styles.tipBox}>
             <Text style={styles.tipText}>
-              💡 Tip: Keep your spending{" "}
-              <Text style={{ fontWeight: "bold" }}>20%</Text> below your budget
-              to save more!
+              💡 Tip: Save 20% of your budget for emergency!
             </Text>
           </View>
         </>
@@ -199,11 +205,7 @@ export default function BudgetScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    flex: 1,
-    backgroundColor: "#fff",
-  },
+  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
   card: {
     backgroundColor: "#f0f4f8",
     padding: 16,
@@ -211,23 +213,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     elevation: 3,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 12,
-  },
-  budgetLine: {
-    fontSize: 16,
-    marginVertical: 4,
-  },
-  amount: {
-    color: "#007bff",
-    fontWeight: "bold",
-  },
-  spent: {
-    color: "#dc3545",
-    fontWeight: "bold",
-  },
+  title: { fontSize: 20, fontWeight: "bold", marginBottom: 12 },
+  budgetLine: { fontSize: 16, marginVertical: 4 },
+  amount: { color: "#007bff", fontWeight: "bold" },
+  spent: { color: "#dc3545", fontWeight: "bold" },
+  remaining: { color: "#28a745", fontWeight: "bold" },
   badge: {
     marginTop: 10,
     padding: 6,
@@ -235,22 +225,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "bold",
   },
-  over: {
-    backgroundColor: "#f8d7da",
-    color: "#721c24",
-  },
-  equal: {
-    backgroundColor: "#fff3cd",
-    color: "#856404",
-  },
-  under: {
-    backgroundColor: "#d4edda",
-    color: "#155724",
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 6,
-  },
+  over: { backgroundColor: "#f8d7da", color: "#721c24" },
+  equal: { backgroundColor: "#fff3cd", color: "#856404" },
+  under: { backgroundColor: "#d4edda", color: "#155724" },
+  label: { fontSize: 16, marginBottom: 6 },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
@@ -259,17 +237,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     backgroundColor: "#fff",
   },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  buttonWrapper: {
-    flex: 1,
-  },
-  editButtonContainer: {
-    marginTop: 10,
-  },
+  buttonRow: { flexDirection: "row", justifyContent: "space-between", gap: 10 },
+  buttonWrapper: { flex: 1 },
+  editButtonContainer: { marginTop: 10 },
   successText: {
     color: "green",
     fontSize: 14,
