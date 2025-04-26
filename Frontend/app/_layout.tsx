@@ -1,15 +1,20 @@
 import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AuthProvider, useAuth } from "./(drawer)/AuthContext";
 
-export default function RootLayout() {
+function RootLayoutInner() {
+  const { resetKey } = useAuth();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem("jwt").then((token) => {
+    const checkToken = async () => {
+      const token = await AsyncStorage.getItem("jwt");
       setIsLoggedIn(!!token);
-    });
-  }, []);
+    };
+
+    checkToken();
+  }, [resetKey]);
 
   if (isLoggedIn === null) return null;
 
@@ -24,5 +29,13 @@ export default function RootLayout() {
         <Stack.Screen name="(drawer)" />
       )}
     </Stack>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootLayoutInner />
+    </AuthProvider>
   );
 }

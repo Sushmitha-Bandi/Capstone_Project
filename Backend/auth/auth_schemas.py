@@ -22,3 +22,7 @@ class UserLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class PasswordResetRequest(BaseModel):
+    username: str
+    new_password: str

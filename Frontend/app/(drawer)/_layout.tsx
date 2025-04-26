@@ -7,13 +7,17 @@ import {
 import { View, Text, Image, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { useAuth } from "./AuthContext";
 
 export default function DrawerLayout() {
   const router = useRouter();
 
   const CustomDrawerContent = (props: any) => {
+    const { resetApp } = useAuth();
+
     const logout = async () => {
-      await AsyncStorage.removeItem("jwt");
+      await AsyncStorage.clear();
+      resetApp();
       router.replace("/LoginScreen");
     };
 
